@@ -6,6 +6,8 @@ It's built to be set up by an AI coding agent in one pass: [`AGENTS.md`](AGENTS.
 
 > Unofficial. Not affiliated with Omarchy or Basecamp. The layout, keybindings and themes are adapted from Omarchy v3.8.4 (MIT).
 
+![Tokyo Night theme: Ghostty with fastfetch, btop and Files, tiled under Waybar](docs/screenshots/hero.webp)
+
 ## What you get
 
 - Hyprland tiling with Omarchy's look, gaps, animations and keybindings
@@ -13,6 +15,25 @@ It's built to be set up by an AI coding agent in one pass: [`AGENTS.md`](AGENTS.
 - **19 themes** that recolor the borders, bar, terminals (Ghostty and Ptyxis), launcher, notifications, lock screen and folder icons. They come with a **live-preview theme picker**: highlight a theme and it applies; Esc reverts.
 - A **live-preview wallpaper picker** with thumbnails, covering the theme wallpapers and your own images in `~/Pictures`
 - Things that work as in GNOME: GNOME Keyring logins in Chrome/Electron apps, dark Qt dialogs, Bluetooth (Blueman), brightness keys without root, your GNOME display scale, keyboard layout and touchpad settings
+
+## Screenshots
+
+**One switch recolors everything**: window borders, bar, terminals, launcher, notifications, lock screen and folder icons.
+
+![The same desktop cycling through ten themes](docs/screenshots/themes-cycle.webp)
+
+![Nine themes side by side: Catppuccin, Gruvbox, Rosé Pine, Everforest, Kanagawa, Osaka Jade, Nord, Ristretto and Flexoki Light](docs/screenshots/themes-grid.webp)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/theme-picker.webp" alt="Theme picker"></td>
+    <td width="50%"><img src="docs/screenshots/wallpaper-picker.webp" alt="Wallpaper picker"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Theme picker</b> (Super + Shift + Ctrl + Space). Highlighting a theme applies it live.</td>
+    <td align="center"><b>Wallpaper picker</b> (Super + Ctrl + Space). Theme wallpapers plus your own <code>~/Pictures</code>.</td>
+  </tr>
+</table>
 
 ## Requirements
 
