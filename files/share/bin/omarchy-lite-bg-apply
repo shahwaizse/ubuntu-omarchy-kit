@@ -1,0 +1,3 @@
+#!/bin/bash
+source "$HOME/.local/share/omarchy-lite/bin/omarchy-lite-lib"
+set_background "$(readlink -f "$CUR/background")"

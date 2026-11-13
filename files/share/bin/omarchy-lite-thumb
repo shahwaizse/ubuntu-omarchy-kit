@@ -1,0 +1,3 @@
+#!/bin/bash
+# rofi -preview-cmd helper: <input> <output> <size>
+ffmpeg -loglevel error -y -i "$1" -vf "scale='min($3*2,iw)':-2" -frames:v 1 "$2"

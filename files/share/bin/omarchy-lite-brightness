@@ -1,0 +1,17 @@
+#!/bin/bash
+# Usage: omarchy-lite-brightness +5 | -5 | 100   (percent; signed = relative)
+# Writes through logind so no root/video-group is needed, then shows the OSD.
+dev=$(ls /sys/class/backlight | head -1); [[ -n $dev ]] || exit 0
+d=/sys/class/backlight/$dev
+max=$(<"$d/max_brightness"); cur=$(<"$d/brightness")
+pct=$(( (cur * 100 + max / 2) / max ))
+case "$1" in
+  +*|-*) pct=$(( pct + $1 )) ;;
+  *) pct=$1 ;;
+esac
+(( pct > 100 )) && pct=100; (( pct < 1 )) && pct=1
+val=$(( max * pct / 100 ))
+busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto \
+  org.freedesktop.login1.Session SetBrightness ssu backlight "$dev" "$val"
+frac=$(awk -v p="$pct" 'BEGIN{printf "%.2f", p/100}')
+swayosd-client --custom-icon display-brightness-symbolic --custom-progress "$frac" --custom-progress-text "${pct}%" >/dev/null 2>&1

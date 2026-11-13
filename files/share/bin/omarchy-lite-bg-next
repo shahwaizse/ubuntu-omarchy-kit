@@ -1,0 +1,8 @@
+#!/bin/bash
+# Cycle to the next wallpaper of the current theme
+source "$HOME/.local/share/omarchy-lite/bin/omarchy-lite-lib"
+mapfile -t bgs < <(theme_backgrounds "$(cat "$CUR/theme/name")")
+(( ${#bgs[@]} )) || exit 0
+now=$(readlink "$CUR/background"); i=0
+for k in "${!bgs[@]}"; do [[ ${bgs[$k]} == "$now" ]] && i=$(( (k + 1) % ${#bgs[@]} )); done
+set_background "${bgs[$i]}"

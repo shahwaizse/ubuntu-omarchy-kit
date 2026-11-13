@@ -1,0 +1,36 @@
+#!/usr/bin/python3 -I
+"""Work around a Hyprland 0.53 bug: after a workspace switch, GTK4 apps (Ghostty, Ptyxis)
+sometimes keep the 'suspended' state and stop drawing until their next configure.
+Re-focusing the active window right after each switch sends a fresh configure."""
+import json, os, socket, subprocess, time
+
+sig = os.environ["HYPRLAND_INSTANCE_SIGNATURE"]
+path = f"{os.environ['XDG_RUNTIME_DIR']}/hypr/{sig}/.socket2.sock"
+
+def hyprctl(*args):
+    return subprocess.run(["hyprctl", *args], capture_output=True, text=True).stdout
+
+def wake():
+    time.sleep(0.05)
+    try:
+        addr = json.loads(hyprctl("activewindow", "-j") or "{}").get("address")
+    except json.JSONDecodeError:
+        return
+    if addr:
+        hyprctl("dispatch", "focuswindow", f"address:{addr}")
+
+while True:
+    try:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(path)
+        buf = b""
+        while chunk := s.recv(4096):
+            buf += chunk
+            *lines, buf = buf.split(b"\n")
+            if any(l.startswith((b"workspace>>", b"focusedmon>>")) for l in lines):
+                wake()
+    except OSError:
+        pass
+    if not os.path.exists(path):
+        break          # Hyprland is gone
+    time.sleep(1)

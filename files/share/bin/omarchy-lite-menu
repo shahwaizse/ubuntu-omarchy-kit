@@ -1,0 +1,36 @@
+#!/bin/bash
+# Fuzzel-based menus: launcher | theme | power | keys
+OL="$HOME/.local/share/omarchy-lite"
+FZ=(fuzzel --config "$HOME/.config/omarchy/current/theme/fuzzel.ini")
+pkill -x fuzzel && exit 0
+case "${1:-launcher}" in
+  # Chromium/Electron apps only use GNOME Keyring when they see "GNOME" in the desktop name;
+  # give it to launched apps only, so portals and Hyprland itself still see plain "Hyprland".
+  launcher) exec "${FZ[@]}" --launch-prefix="env XDG_CURRENT_DESKTOP=Hyprland:GNOME" ;;
+  theme)
+    t=$(ls "$OL/themes" | "${FZ[@]}" --dmenu -p "Theme ❯ ") && exec "$OL/bin/omarchy-lite-theme-set" "$t" ;;
+  wallpaper)
+    source "$OL/bin/omarchy-lite-lib"
+    cd "$HOME/Pictures" || exit 1
+    w=$(find -L . -path ./Screenshots -prune -o -type f \( -iname '*.webp' -o -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \) -print \
+        | sed 's|^\./||' | sort | "${FZ[@]}" --dmenu -p "Wallpaper ❯ " -w 60) || exit 0
+    set_background "$HOME/Pictures/$w" ;;
+  power)
+    c=$(printf '  Lock\n󰤄  Suspend\n󰍃  Log out\n  Reboot\n  Shutdown\n' | "${FZ[@]}" --dmenu -p "System ❯ " -l 5 -w 24) || exit 0
+    case "$c" in
+      *Lock) exec hyprlock ;;
+      *Suspend) exec systemctl suspend ;;
+      *Log*) exec hyprctl dispatch exit ;;
+      *Reboot) exec systemctl reboot ;;
+      *Shutdown) exec systemctl poweroff ;;
+    esac ;;
+  keys)
+    hyprctl binds -j | jq -r '
+      .[] | select(.has_description) | .modmask as $m | .description as $d
+      | (if .key == "" then ((.keycode - 9) % 10 | tostring) else .key end) as $k
+      | ([ (if ($m/64|floor)%2==1 then "SUPER" else empty end),
+           (if ($m/4|floor)%2==1 then "CTRL" else empty end),
+           (if ($m/8|floor)%2==1 then "ALT" else empty end),
+           (if $m%2==1 then "SHIFT" else empty end), $k ] | join(" + ")) as $combo
+      | "\($combo)\t→  \($d)"' | column -t -s $'\t' | "${FZ[@]}" --dmenu -p "Keys ❯ " -w 90 -l 20 >/dev/null ;;
+esac

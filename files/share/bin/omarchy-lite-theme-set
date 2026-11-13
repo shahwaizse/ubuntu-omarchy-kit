@@ -1,0 +1,68 @@
+#!/bin/bash
+# Usage: omarchy-lite-theme-set <theme>
+set -euo pipefail
+OL="$HOME/.local/share/omarchy-lite"
+CUR="$HOME/.config/omarchy/current"
+name="${1:-}"
+if [[ -z $name || ! -d $OL/themes/$name ]]; then
+  echo "usage: omarchy-lite-theme-set <theme>"; ls "$OL/themes"; exit 1
+fi
+src="$OL/themes/$name"
+next="$CUR/next-theme"
+rm -rf "$next"; mkdir -p "$next"
+
+# Theme-specific files win over generated templates
+find "$src" -maxdepth 1 -type f ! -name colors.toml -exec cp {} "$next/" \;
+
+sedf=$(mktemp)
+while IFS='=' read -r key value; do
+  key="${key//[\"\' ]/}"
+  [[ $key && $key != \#* ]] || continue
+  value="${value#*[\"\']}"; value="${value%%[\"\']*}"
+  printf 's|{{ %s }}|%s|g\n' "$key" "$value"
+  printf 's|{{ %s_strip }}|%s|g\n' "$key" "${value#\#}"
+  if [[ $value =~ ^#[0-9a-fA-F]{6} ]]; then
+    h="${value#\#}"
+    printf 's|{{ %s_rgb }}|%d,%d,%d|g\n' "$key" "0x${h:0:2}" "0x${h:2:2}" "0x${h:4:2}"
+  fi
+done <"$src/colors.toml" >"$sedf"
+for tpl in "$OL"/themed/*.tpl; do
+  out="$next/$(basename "$tpl" .tpl)"
+  [[ -f $out ]] || sed -f "$sedf" "$tpl" >"$out"
+done
+rm -f "$sedf"
+echo "$name" >"$next/name"
+
+rm -rf "$CUR/theme"; mv "$next" "$CUR/theme"
+source "$OL/bin/omarchy-lite-lib"
+
+# GNOME-wide settings (Ptyxis palette, icon set) are only touched from inside Hyprland,
+# so installing or running this from GNOME never changes how GNOME looks.
+IN_HYPR=${HYPRLAND_INSTANCE_SIGNATURE:+1}
+
+# Ptyxis terminal palette: install as omarchy-<theme> and select it on the default profile
+if [[ -n $IN_HYPR && -f $CUR/theme/ptyxis.palette ]] && command -v ptyxis >/dev/null; then
+  pd="$HOME/.local/share/org.gnome.Ptyxis/palettes"; mkdir -p "$pd"
+  sed "s/^Name=Omarchy$/Name=Omarchy $name/" "$CUR/theme/ptyxis.palette" >"$pd/omarchy-$name.palette"
+  prof=$(gsettings get org.gnome.Ptyxis default-profile-uuid 2>/dev/null | tr -d "'")
+  [[ -n $prof ]] && gsettings set "org.gnome.Ptyxis.Profile:/org/gnome/Ptyxis/Profiles/$prof/" palette "omarchy-$name"
+fi
+
+# Icon set (folder colours in Files etc.)
+if [[ -n $IN_HYPR && -f $CUR/theme/icons.theme ]]; then
+  ic=$(<"$CUR/theme/icons.theme")
+  [[ ! -f $CUR/theme/light.mode && -d /usr/share/icons/$ic-dark ]] && ic="$ic-dark"
+  [[ -d /usr/share/icons/$ic ]] && gsettings set org.gnome.desktop.interface icon-theme "$ic"
+fi
+bg=$(theme_backgrounds "$name" | head -1)
+if [[ -n $bg ]]; then ln -sfn "$bg" "$CUR/background"; fi
+
+if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+  hyprctl reload >/dev/null
+  pkill -SIGUSR2 -x waybar || true
+  makoctl reload 2>/dev/null || true
+  pkill -SIGUSR2 -x ghostty || true
+  restart_osd
+  [[ -n $bg ]] && set_background "$bg"
+  [[ -n ${OMARCHY_QUIET:-} ]] || notify-send -u low "Theme: $name"
+fi

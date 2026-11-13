@@ -1,0 +1,82 @@
+#!/bin/bash
+# Live-preview pickers.  omarchy-lite-pick wallpaper|theme
+# (internal: preview-wall/preview-theme <name>, restore-wall, restore-theme)
+source "$HOME/.local/share/omarchy-lite/bin/omarchy-lite-lib"
+RT="${XDG_RUNTIME_DIR:-/tmp}/omarchy-lite-pick"; mkdir -p "$RT"
+SELF="$OL/bin/omarchy-lite-pick"
+
+rofi_pick() {   # <prompt> <selected-row> <on-change> <on-cancel>
+  rofi -dmenu -i -show-icons -p "$1" -selected-row "$2" \
+    -theme "$CUR/theme/rofi.rasi" \
+    -preview-cmd "$OL/bin/omarchy-lite-thumb \"{input}\" \"{output}\" \"{size}\"" \
+    -on-selection-changed "$3" -on-menu-canceled "$4"
+}
+
+debounced() {   # <key> <value> <delay> -> true if value is still the latest after delay
+  echo "$2" >"$RT/$1"; sleep "$3"; [[ $(cat "$RT/$1" 2>/dev/null) == "$2" ]]
+}
+
+apply_theme() {   # <theme> [key-to-check]  — latest-wins, lock not inherited by children
+  (
+    flock 9
+    [[ -z $2 || $(cat "$RT/$2" 2>/dev/null) == "$1" ]] || exit 0
+    [[ $1 != "$(cat "$RT/applied-theme" 2>/dev/null)" ]] || exit 0
+    OMARCHY_QUIET=1 "$OL/bin/omarchy-lite-theme-set" "$1" 9>&- && echo "$1" >"$RT/applied-theme"
+  ) 9>"$RT/lock"
+}
+
+# hook processes must not hold rofi's output pipe open
+[[ $1 == preview-* || $1 == restore-* ]] && exec >/dev/null 2>&1 </dev/null
+
+case "$1" in
+  wallpaper)
+    pkill -x rofi && exit 0
+    readlink -f "$CUR/background" >"$RT/orig-wall"
+    : >"$RT/walls"; row=0; i=0; cur=$(cat "$RT/orig-wall")
+    # Theme wallpapers are labelled "<theme>/<name>", your own as their path under ~/Pictures
+    while IFS= read -r f; do
+      case $f in
+        "$OL"/themes/*) rel=${f#"$OL"/themes/}; rel=${rel/\/backgrounds\//\/} ;;
+        *) rel=${f#"$HOME"/Pictures/} ;;
+      esac
+      printf '%s\t%s\n' "${rel%.*}" "$f" >>"$RT/walls"
+      [[ $f == "$cur" ]] && row=$i; i=$((i + 1))
+    done < <({ find -L "$OL"/themes/*/backgrounds -maxdepth 1 -type f 2>/dev/null
+               find -L "$HOME/Pictures" -path "$HOME/Pictures/Screenshots" -prune -o -type f \
+                 \( -iname '*.webp' -o -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \) -print; } | sort -u)
+    choice=$(while IFS=$'\t' read -r n f; do printf '%s\0icon\x1fthumbnail://%s\n' "$n" "$f"; done <"$RT/walls" \
+      | rofi_pick "Wallpaper ❯" "$row" "$SELF preview-wall '{entry}'" "$SELF restore-wall") || exit 0
+    f=$(awk -F'\t' -v n="$choice" '$1==n{print $2; exit}' "$RT/walls")
+    [[ -n $f ]] && set_background "$f" ;;
+
+  preview-wall)
+    debounced wall "$2" 0.12 || exit 0
+    f=$(awk -F'\t' -v n="$2" '$1==n{print $2; exit}' "$RT/walls")
+    [[ -n $f ]] && show_background "$f" ;;
+
+  restore-wall)
+    echo "" >"$RT/wall"; show_background "$(cat "$RT/orig-wall")" ;;
+
+  theme)
+    pkill -x rofi && exit 0
+    cat "$CUR/theme/name" >"$RT/orig-theme"; cp "$RT/orig-theme" "$RT/applied-theme"
+    readlink -f "$CUR/background" >"$RT/orig-wall"
+    mapfile -t themes < <(ls "$OL/themes")
+    row=0; for i in "${!themes[@]}"; do [[ ${themes[$i]} == "$(cat "$RT/orig-theme")" ]] && row=$i; done
+    choice=$(for t in "${themes[@]}"; do printf '%s\0icon\x1fthumbnail://%s\n' "$t" "$OL/themes/$t/preview.png"; done \
+      | rofi_pick "Theme ❯" "$row" "$SELF preview-theme '{entry}'" "$SELF restore-theme") || exit 0
+    echo "" >"$RT/theme"
+    [[ -d $OL/themes/$choice ]] && apply_theme "$choice"
+    notify-send -u low "Theme: $choice" ;;
+
+  preview-theme)
+    debounced theme "$2" 0.35 || exit 0
+    [[ -d $OL/themes/$2 ]] && apply_theme "$2" theme ;;
+
+  restore-theme)
+    echo "" >"$RT/theme"; orig=$(cat "$RT/orig-theme")
+    if [[ $orig != "$(cat "$RT/applied-theme")" ]]; then
+      apply_theme "$orig"
+      set_background "$(cat "$RT/orig-wall")"
+    fi ;;
+esac
