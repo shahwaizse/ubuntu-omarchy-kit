@@ -76,4 +76,4 @@ Log out, click the gear on the login screen, pick **Hyprland** (not "uwsm-manage
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Includes configuration adapted from Omarchy © David Heinemeier Hansson. Themes and wallpapers are downloaded from the Omarchy repository at install time, not redistributed here.
+MIT, see [LICENSE](LICENSE). Includes configuration adapted from Omarchy © David Heinemeier Hansson. Themes and wallpapers are downloaded from the Omarchy repository at install time, not redistributed here.
