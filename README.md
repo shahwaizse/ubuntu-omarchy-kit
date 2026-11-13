@@ -6,7 +6,7 @@ It's built to be set up by an AI coding agent in one pass: [`AGENTS.md`](AGENTS.
 
 > Unofficial. Not affiliated with Omarchy or Basecamp. The layout, keybindings and themes are adapted from Omarchy v3.8.4 (MIT).
 
-![Tokyo Night theme: Ghostty with fastfetch, btop and Files, tiled under Waybar](docs/screenshots/hero.webp)
+![Matte Black theme: Ghostty and an app tiled under Waybar](docs/screenshots/hero.webp)
 
 ## What you get
 
