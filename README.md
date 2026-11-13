@@ -22,8 +22,6 @@ It's built to be set up by an AI coding agent in one pass: [`AGENTS.md`](AGENTS.
 
 ![The same desktop cycling through ten themes](docs/screenshots/themes-cycle.webp)
 
-![Nine themes side by side: Catppuccin, Gruvbox, Rosé Pine, Everforest, Kanagawa, Osaka Jade, Nord, Ristretto and Flexoki Light](docs/screenshots/themes-grid.webp)
-
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/theme-picker.webp" alt="Theme picker"></td>
